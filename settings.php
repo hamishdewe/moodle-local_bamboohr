@@ -26,7 +26,6 @@ global $DB;
 include_once($CFG->dirroot . '/local/bamboohr/lib.php');
 
 if ($hassiteconfig) {
-  $fields = local_bamboohr_get_fields();
   $customfields = array(
     'checkbox' => $DB->get_records_menu('user_info_field', array('datatype'=>'checkbox'), 'name asc', 'shortname, name'),
     'datetime' => $DB->get_records_menu('user_info_field', array('datatype'=>'datetime'), 'name asc', 'shortname, name'),
@@ -75,7 +74,6 @@ if ($hassiteconfig) {
             get_string('apikeydesc', 'local_bamboohr')
             , '')
     );
-  }
 
   $settings->add(
     new admin_setting_configselect("bamboohr/update",
@@ -90,7 +88,9 @@ if ($hassiteconfig) {
       '', 0, $roles
       )
     );
-
+  if (!$fields = local_bamboohr_get_fields()) {
+    return;
+  }
 // checkbox, datetime, menu, text
   foreach ($fields as $field) {
     if ($field->alias === 'workEmail') {
@@ -230,3 +230,4 @@ if ($hassiteconfig) {
       );
 
   }
+}

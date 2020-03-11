@@ -56,9 +56,10 @@ function local_bamboohr_field_has_alias($item) {
 }
 
 function local_bamboohr_get_fields() {
-  $fields = array_filter(local_bamboohr_curl_get('meta/fields/'), "local_bamboohr_field_has_alias") ;
-  //for ()
-  return $fields;
+  if ($remote = local_bamboohr_curl_get('meta/fields/')) {
+    $fields = array_filter($remote, "local_bamboohr_field_has_alias");
+    return $fields;
+  }
 }
 
 function local_bamboohr_get_lists() {
@@ -246,6 +247,10 @@ function local_bamboohr_update_menu_options() {
 
 function local_bamboohr_curl_get($path) {
   $config = get_config('bamboohr');
+  // Exit if not yet configured
+  if (!$config->subdomain || !$config->apikey) {
+    return false; 
+  }
 
   $ch = curl_init("https://api.bamboohr.com/api/gateway.php/{$config->subdomain}/v1/{$path}");
   curl_setopt($ch, CURLOPT_HTTPHEADER, array('Accept: application/json'));
