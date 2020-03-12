@@ -78,7 +78,7 @@ if ($hassiteconfig) {
   $settings->add(
     new admin_setting_configselect("bamboohr/update",
       'Sync update field',
-      'This field must be set', 0, array_merge([0=>'Not set'], $customfields['datetime'])
+      'This field must be set. Datetime is updated on sync.', 0, array_merge([0=>'Not set'], $customfields['datetime'])
       )
     );
 
@@ -94,6 +94,15 @@ if ($hassiteconfig) {
 // checkbox, datetime, menu, text
   foreach ($fields as $field) {
     if ($field->alias === 'workEmail') {
+      continue;
+    }
+    if(!ctype_alnum(str_replace(['-','_'], '', $field->alias))) {
+      //var_dump($field); die;
+      $settings->add(
+        new admin_setting_description("bamboohr/map_{$field->id}",
+          "{$field->alias}", "Cannot be mapped due to unsupported characters in its name."
+          )
+        );
       continue;
     }
     $options = array('None'=> array('0'=>'No mapping'));
