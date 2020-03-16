@@ -100,7 +100,7 @@ if ($hassiteconfig) {
       //var_dump($field); die;
       $settings->add(
         new admin_setting_description("bamboohr/map_{$field->id}",
-          "{$field->alias}", "Cannot be mapped due to unsupported characters in its name."
+          "{$field->name}", "Cannot be mapped due to unsupported characters in its alias name: '{$field->alias}'"
           )
         );
       continue;

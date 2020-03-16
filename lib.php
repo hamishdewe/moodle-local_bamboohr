@@ -88,18 +88,20 @@ function local_bamboohr_update_supervisor_role($supervisor, $employee) {
 
     }
   } else {
-    $assignment = (object) array(
-      'roleid'=>$roleid,
-      'contextid'=>$context->id,
-      'userid'=>$supervisor->id,
-      'timemodified'=>time(),
-      'modifierid'=>2,
-      'component'=>'local_bamboohr',
-      'itemid'=>0,
-      'sortorder'=>0
-    );
-    $assignment->id = $DB->insert_record('role_assignments', $assignment);
-    mtrace("Supervisor role created: {$assignment->id}");
+    if ($supervisor && $supervisor->id) {
+      $assignment = (object) array(
+        'roleid'=>$roleid,
+        'contextid'=>$context->id,
+        'userid'=>$supervisor->id,
+        'timemodified'=>time(),
+        'modifierid'=>2,
+        'component'=>'local_bamboohr',
+        'itemid'=>0,
+        'sortorder'=>0
+      );
+      $assignment->id = $DB->insert_record('role_assignments', $assignment);
+      mtrace("Supervisor role created: {$assignment->id}");
+    }
   }
 }
 
@@ -172,28 +174,20 @@ function local_bamboohr_sync_local_users($userid = null, $until = null, $limit =
   $mapping = local_bamboohr_get_mapping();
   foreach($users as $user) {
     if ($employee = local_bamboohr_get_employee_by_id($user->idnumber)) {
-      $supervisor = isset($employee->supervisorEId)
+      $supervisor = isset($employee->supervisorEId) && isset($employee->supervisor)
                     ? $DB->get_record('user', ['idnumber'=>$employee->supervisorEId])
-                    : local_bamboohr_get_user_by_employee($employees[array_search($employee->supervisor)], array_column($employees, 'displayName'));
+                    : local_bamboohr_get_user_by_employee($employees[array_search($employee->supervisor, array_column($employees, 'displayName'))]);
       local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, $user);
     }
   }
 }
 
-function local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, $user = null) {
+function local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, $user) {
   global $DB;
   $config = get_config('bamboohr', 'update');
-  $user = is_object($user) ? $user : new stdClass();
-  $user->auth = (isset($employee->division) && $employee->division === 'Corepoint Health') ? 'manual' : 'saml2';
-  $user->confirmed = true;
-  $user->mnethostid = 1;
-  $user->username = strtolower(trim($employee->workEmail));
-  $user->email = strtolower(trim($employee->workEmail));
   $user->idnumber = $employee->id;
-  if (isset($employee->status) && $employee->status !== 'Active') {
-    $user->suspended = 1;
-  }
-  $profilefields = [$config=> time()];
+
+  $profilefields = [ $config => time() ];
   foreach ($mapping as $source=>$target) {
     if (!isset($employee->$source) ) {
       continue;
@@ -216,14 +210,9 @@ function local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, 
   if (isset($user->id)) {
     user_update_user($user, false);
     mtrace("Updated user: {$user->id}");
-  } else {
-    $user->id = user_create_user($user, $user->auth === 'saml2' ? false : true);
-    // Set the update time for create to first
-    $profilefields[$config] = 0;
-    mtrace("Created user: {$user->id}");
+    profile_save_custom_fields($user->id, $profilefields);
+    local_bamboohr_update_supervisor_role($supervisor, $employee);
   }
-  profile_save_custom_fields($user->id, $profilefields);
-  local_bamboohr_update_supervisor_role($supervisor, $employee);
 }
 
 function local_bamboohr_update_menu_options() {
@@ -249,7 +238,7 @@ function local_bamboohr_curl_get($path) {
   $config = get_config('bamboohr');
   // Exit if not yet configured
   if (!$config->subdomain || !$config->apikey) {
-    return false; 
+    return false;
   }
 
   $ch = curl_init("https://api.bamboohr.com/api/gateway.php/{$config->subdomain}/v1/{$path}");
