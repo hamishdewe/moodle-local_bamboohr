@@ -169,7 +169,7 @@ function local_bamboohr_sync_local_users($userid = null, $until = null, $limit =
     $where .= ' and (uid.data <= ' . $until . ' or uid.data is null) and u.idnumber > 0 ';
     $orderby = ' order by uid.data asc';
   }
-  $count = intval($limit) > 0 ? intval($limit) : 200;
+  $count = intval($limit) > 0 ? intval($limit) : 500;
   $users = $DB->get_records_sql('select u.* from {user} u ' . $join . ' where u.idnumber is not null and u.idnumber != "" and u.idnumber > 0 and u.deleted = 0' . $where . $orderby, array(), 0, $count);
   $employees = local_bamboohr_get_directory();
   $mapping = local_bamboohr_get_mapping();
