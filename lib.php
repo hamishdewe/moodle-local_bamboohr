@@ -158,6 +158,7 @@ function local_bamboohr_get_last_cron_time() {
 }
 function local_bamboohr_sync_local_users($userid = null, $until = null, $limit = null) {
   global $DB;
+  //var_dump(get_string_manager()->get_list_of_countries());
   set_time_limit(0);
   $where = !is_null($userid) && intval($userid) > 1 ?  " and u.id = {$userid}" : '';
   $join = '';
@@ -168,7 +169,7 @@ function local_bamboohr_sync_local_users($userid = null, $until = null, $limit =
     $where .= ' and (uid.data <= ' . $until . ' or uid.data is null) and u.idnumber > 0 ';
     $orderby = ' order by uid.data asc';
   }
-  $count = intval($limit) > 0 ? intval($limit) : 50;
+  $count = intval($limit) > 0 ? intval($limit) : 200;
   $users = $DB->get_records_sql('select u.* from {user} u ' . $join . ' where u.idnumber is not null and u.idnumber != "" and u.idnumber > 0 and u.deleted = 0' . $where . $orderby, array(), 0, $count);
   $employees = local_bamboohr_get_directory();
   $mapping = local_bamboohr_get_mapping();
@@ -196,7 +197,21 @@ function local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, 
     if (local_bamboohr_is_user_field($target)) {
       $user->$target = $employee->$source;
     } else if ($target === 'country') {
-      $user->$target = array_search($employee->$source, get_string_manager()->get_list_of_countries());
+      mtrace("Update country '{$employee->$source}'");
+      if ($country = array_search($employee->$source, get_string_manager()->get_list_of_countries())) {
+        $user->$target = array_search($employee->$source, get_string_manager()->get_list_of_countries());
+      } else {
+        switch ($employee->$source) {
+          case 'Moldova': {
+            $user->$target = 'MD';
+            break;
+          }
+          default: {
+            mtrace("Unmapped country code for {$employee->$source}");
+            $user->$target = null;
+          }
+        }
+      }
     } else {
       $uif = $DB->get_record('user_info_field', ['shortname'=> $target]);
       if ($uif->datatype === 'datetime') {
