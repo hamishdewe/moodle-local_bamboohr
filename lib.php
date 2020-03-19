@@ -175,7 +175,7 @@ function local_bamboohr_sync_local_users($userid = null, $until = null, $limit =
   foreach($users as $user) {
     if ($employee = local_bamboohr_get_employee_by_id($user->idnumber)) {
       $supervisor = isset($employee->supervisorEId) && isset($employee->supervisor)
-                    ? $DB->get_record('user', ['idnumber'=>$employee->supervisorEId])
+                    ? $DB->get_record('user', ['idnumber'=>$employee->supervisorEId, 'deleted'=>0, 'suspended'=>0])
                     : local_bamboohr_get_user_by_employee($employees[array_search($employee->supervisor, array_column($employees, 'displayName'))]);
       local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, $user);
     }
