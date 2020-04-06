@@ -71,9 +71,6 @@ function local_bamboohr_update_supervisor_role($supervisor, $bamboo_employee) {
 
   $roleid = get_config('bamboohr', 'supervisorroleid');
   $employee = local_bamboohr_get_user_by_employee($bamboo_employee);
-  if ($employee->id != 59) {
-    return;
-  }
   $context = context_user::instance($employee->id);
   if ($assignment = $DB->get_record('role_assignments', ['contextid'=>$context->id, 'component'=>'local_bamboohr'])) {
     if ($employee->suspended || is_null($supervisor) || !isset($supervisor->id)) {
@@ -205,7 +202,7 @@ function local_bamboohr_sync_local_users($userid = null, $until = null, $limit =
 function local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, $user) {
   global $DB;
 
-  if (is_null($employee) || is_null($user) || empty($employee->id)) {
+  if (!$employee || !$user || !$employee->id) {
     return;
   }
   $config = get_config('bamboohr', 'update');
