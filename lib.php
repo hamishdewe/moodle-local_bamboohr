@@ -68,13 +68,14 @@ function local_bamboohr_get_lists() {
 
 function local_bamboohr_update_supervisor_role($supervisor, $bamboo_employee) {
   global $DB;
-
+  
   $roleid = get_config('bamboohr', 'supervisorroleid');
   $employee = local_bamboohr_get_user_by_employee($bamboo_employee);
   $context = context_user::instance($employee->id);
   if ($assignment = $DB->get_record('role_assignments', ['contextid'=>$context->id, 'component'=>'local_bamboohr'])) {
     if ($employee->suspended || is_null($supervisor) || !isset($supervisor->id)) {
-      mtrace("Delete supervisor role: {$assignment->id}");
+      $nullsupervisor = is_null($supervisor);
+      mtrace("Delete supervisor role: {$assignment->id} (suspended: {$employee->suspended}, null: {$nullsupervisor}, supervisorid: {$supervisor->id})");
       $DB->delete_records('role_assignments', (array)$assignment);
     } else {
       if ($assignment->roleid !== $roleid || $assignment->userid !== $supervisor->id) {
@@ -86,7 +87,6 @@ function local_bamboohr_update_supervisor_role($supervisor, $bamboo_employee) {
       } else {
         mtrace("Supervisor role already valid: {$assignment->id}");
       }
-
     }
   } else {
     if ($supervisor && $supervisor->id) {
@@ -147,13 +147,13 @@ function local_bamboohr_sync_directory() {
   $mapping = local_bamboohr_get_mapping();
   foreach ($employees as $employee) {
     $user = local_bamboohr_get_user_by_employee($employee);
-    $supervisor = local_bamboo_get_supervisor_by_employee($employee);
+    $supervisor = local_bamboohr_get_supervisor_by_employee($employee, $employees);
     local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, $user);
   }
 }
 
-function local_bamboo_get_supervisor_by_employee($employee) {
-  $supervisor = empty($employee->supervisorEId) || empty($employee->supervisor)
+function local_bamboohr_get_supervisor_by_employee($employee, $employees) {
+  $supervisor = empty($employee->supervisor)
     ? null
     : local_bamboohr_get_user_by_employee($employees[array_search($employee->supervisor, array_column($employees, 'displayName'))]);
     return $supervisor;
@@ -165,39 +165,39 @@ function local_bamboohr_get_last_cron_time() {
   return $DB->get_field('task_scheduled', 'lastruntime', ['component'=>'local_bamboohr', 'classname'=>'\local_bamboohr\task\local']);
 }
 
-function local_bamboohr_sync_local_users($userid = null, $until = null, $limit = null) {
-  global $DB;
-  //var_dump(get_string_manager()->get_list_of_countries());
-  set_time_limit(0);
-  $where = !is_null($userid) && intval($userid) > 1 ?  " and u.id = {$userid}" : '';
-  $join = '';
-  $orderby = '';
-  if (!is_null($until) && intval($until) < time()) {
-    $config = get_config('bamboohr', 'update');
-    $join = 'left join {user_info_data} uid on uid.fieldid = (select id from {user_info_field} where shortname = "' . $config . '") and uid.userid = u.id ';
-    $where .= ' and (uid.data <= ' . $until . ' or uid.data is null) and u.idnumber > 0 ';
-    $orderby = ' order by uid.data asc';
-  }
-  $count = intval($limit) > 0 ? intval($limit) : 500;
-  $users = $DB->get_records_sql('select u.* from {user} u ' . $join . ' where u.idnumber is not null and u.idnumber != "" and u.idnumber > 0 and u.deleted = 0' . $where . $orderby, array(), 0, $count);
-  $employees = local_bamboohr_get_directory();
-  $mapping = local_bamboohr_get_mapping();
-  foreach($users as $user) {
-    if ($employee = local_bamboohr_get_employee_by_id($user->idnumber)) {
-      $supervisor = null;
-
-      if (isset($employee->supervisorEId) && isset($employee->supervisor)) {
-        $supervisor = $DB->get_record_sql('select * from {user} where idnumber = :idnumber and (deleted = 0 or suspended = 0)', ['idnumber'=>$employee->supervisorEId]);
-        //mtrace('supervisor search 1');
-      } else if (!is_null($employee->supervisor) && !is_null($employee->supervisorEId)) {
-        $supervisor = local_bamboohr_get_user_by_employee($employees[array_search($employee->supervisor, array_column($employees, 'displayName'))]);
-        //mtrace('supervisor search 2');
-      }
-
-      local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, $user);
-    }
-  }
-}
+// function local_bamboohr_sync_local_users($userid = null, $until = null, $limit = null) {
+//   global $DB;
+//   //var_dump(get_string_manager()->get_list_of_countries());
+//   set_time_limit(0);
+//   $where = !is_null($userid) && intval($userid) > 1 ?  " and u.id = {$userid}" : '';
+//   $join = '';
+//   $orderby = '';
+//   if (!is_null($until) && intval($until) < time()) {
+//     $config = get_config('bamboohr', 'update');
+//     $join = 'left join {user_info_data} uid on uid.fieldid = (select id from {user_info_field} where shortname = "' . $config . '") and uid.userid = u.id ';
+//     $where .= ' and (uid.data <= ' . $until . ' or uid.data is null) and u.idnumber > 0 ';
+//     $orderby = ' order by uid.data asc';
+//   }
+//   $count = intval($limit) > 0 ? intval($limit) : 500;
+//   $users = $DB->get_records_sql('select u.* from {user} u ' . $join . ' where u.idnumber is not null and u.idnumber != "" and u.idnumber > 0 and u.deleted = 0' . $where . $orderby, array(), 0, $count);
+//   $employees = local_bamboohr_get_directory();
+//   $mapping = local_bamboohr_get_mapping();
+//   foreach($users as $user) {
+//     if ($employee = local_bamboohr_get_employee_by_id($user->idnumber)) {
+//       $supervisor = null;
+// 
+//       if (isset($employee->supervisorEId) && isset($employee->supervisor)) {
+//         $supervisor = $DB->get_record_sql('select * from {user} where idnumber = :idnumber and (deleted = 0 or suspended = 0)', ['idnumber'=>$employee->supervisorEId]);
+//         //mtrace('supervisor search 1');
+//       } else if (!is_null($employee->supervisor) && !is_null($employee->supervisorEId)) {
+//         $supervisor = local_bamboohr_get_user_by_employee($employees[array_search($employee->supervisor, array_column($employees, 'displayName'))]);
+//         //mtrace('supervisor search 2');
+//       }
+// 
+//       local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, $user);
+//     }
+//   }
+// }
 
 function local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, $user) {
   global $DB;

@@ -21,9 +21,7 @@ class full_sync extends \core\task\scheduled_task {
       require_once(dirname(__FILE__) . '/../../lib.php');
       mtrace('Update menu options');
       local_bamboohr_update_menu_options();
-      mtrace('Sync from directory listing - create and update');
+      mtrace('Sync from directory listing - update only');
       local_bamboohr_sync_directory();
-      mtrace('Sync all local users');
-      local_bamboohr_sync_local_users();
     }
 }
