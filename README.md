@@ -10,3 +10,8 @@ Where a User context role is selected for the Supervisor, the Supervisor's Moodl
 ## References
 * BambooHR documentation https://documentation.bamboohr.com/docs
 * Moodle example supervisor role https://docs.moodle.org/36/en/Parent_role
+
+## Changes
+### 20200724
+* Remove dependency on BambooHR employeeId in idnumber
+* Remove individual record sync, fix supervisor assignment
