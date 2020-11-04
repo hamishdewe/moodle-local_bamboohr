@@ -171,6 +171,7 @@ function local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, 
   if (!$employee || !$user || !$employee->id) {
     return;
   }
+  $employee = local_bamboohr_get_employee_by_id($employee->id);
   $config = get_config('bamboohr', 'update');
 
   $profilefields = [ $config => time() ];
@@ -199,8 +200,12 @@ function local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, 
     } else {
       $uif = $DB->get_record('user_info_field', ['shortname'=> $target]);
       if ($uif->datatype === 'datetime') {
-        $parts = explode('-', $employee->$source);
-        $employee->$source = mktime (0, 0, 0, $parts[1], $parts[2], $parts[0]);
+        if ($employee->$source === '0000-00-00') {
+            $employee->$source = 0;
+        } else {
+          $parts = explode('-', $employee->$source);
+          $employee->$source = mktime (0, 0, 0, $parts[1], $parts[2], $parts[0]);
+        }
       }
       $profilefields[$target] = $employee->$source;
     }
@@ -209,6 +214,7 @@ function local_bamboohr_save_employee_as_user($employee, $supervisor, $mapping, 
   if (isset($user->id)) {
     user_update_user($user, false);
     mtrace("Updated user: {$user->id}");
+    var_dump($profilefields);
     profile_save_custom_fields($user->id, $profilefields);
     local_bamboohr_update_supervisor_role($supervisor, $employee);
   }
