@@ -93,14 +93,16 @@ if ($hassiteconfig) {
   }
 // checkbox, datetime, menu, text
   foreach ($fields as $field) {
-    if ($field->alias === 'workEmail') {
+    if ($field->id === 'workEmail') {
       continue;
     }
-    if(!ctype_alnum(str_replace(['-','_'], '', $field->alias))) {
-      //var_dump($field); die;
+    if ($field->name === '') {
+      continue;
+    }
+    if(!ctype_alnum(str_replace(['-','_'], '', $field->id))) {
       $settings->add(
         new admin_setting_description("bamboohr/map_{$field->id}",
-          "{$field->name}", "Cannot be mapped due to unsupported characters in its alias name: '{$field->alias}'"
+          "{$field->name}", "Cannot be mapped due to unsupported characters in its id: '{$field->id}'"
           )
         );
       continue;
@@ -108,7 +110,7 @@ if ($hassiteconfig) {
     $options = array('None'=> array('0'=>'No mapping'));
     $default = 0;
     $description = '';
-    switch ($field->alias) {
+    switch ($field->id) {
       case 'city': {
         $default = 'city';
         break;
@@ -143,9 +145,9 @@ if ($hassiteconfig) {
         break;
       }
     }
-    if ($field->alias === 'firstName') {
+    if ($field->name === 'firstName') {
       $default = 'firstname';
-    } else if ($field->alias === 'lastName') {
+  } else if ($field->name === 'lastName') {
       $default = 'lastname';
     }
     switch ($field->type) {
@@ -232,7 +234,7 @@ if ($hassiteconfig) {
       }
     }
     $settings->add(
-      new admin_setting_configselect("bamboohr/map_{$field->alias}",
+      new admin_setting_configselect("bamboohr/map_{$field->id}",
         get_string('enablefield', 'local_bamboohr', $field),
         $description, $default, $options
         )

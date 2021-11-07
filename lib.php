@@ -56,10 +56,10 @@ function local_bamboohr_field_has_alias($item) {
 }
 
 function local_bamboohr_get_fields() {
-  if ($remote = local_bamboohr_curl_get('meta/fields/')) {
-    $fields = array_filter($remote, "local_bamboohr_field_has_alias");
-    return $fields;
+  if ($remote = local_bamboohr_curl_get('employees/directory')) {
+    return $remote->fields;
   }
+  return $fields;
 }
 
 function local_bamboohr_get_lists() {
